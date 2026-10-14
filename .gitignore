@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+.DS_Store
+/dist/
+/staged-release/
+/work/
+*.zip
+*.7z
+*.pem
+*.p12
+*.pfx
+*.key
+.env
+.env.*

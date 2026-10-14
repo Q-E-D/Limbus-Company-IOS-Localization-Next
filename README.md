@@ -1,8 +1,24 @@
 # Limbus-Company-IOS-Localization-Next
 
-面向 Shadowrocket / iOS MitM 汉化的离线资源审核与打包原型。当前不提供可直接安装的汉化发行版。
+面向 Shadowrocket / iOS MitM 汉化的离线资源审核与打包原型。首个发行版使用已核查的 ghcruise `v1.116.2-alpha` 资源（2026-10-08），提供固定版本的安装模块。
 
 此工具支持两种操作：验证并原样暂存已审查的 ZIP/清单，或用已经适配移动端字库的 JSON 覆盖现有日文槽位、重新生成 ZIP 与清单。仅用 Python 3 标准库；不联网、不安装证书、不运行游戏、不发布 GitHub Release。
+
+## Shadowrocket 安装
+
+前提：已在 Shadowrocket 生成、安装并信任自己的 CA，已开启 HTTPS 解密。
+
+1. 在 Shadowrocket 的“配置”页点击当前配置右侧 ⓘ，进入“模块”，点 ＋ 添加下方地址并启用。
+2. 如有其他 Limbus 汉化模块，关闭它们，避免规则冲突。
+3. 重新连接 Shadowrocket，完全退出并重新打开游戏，将游戏语言设为日语；允许下载语言资源。
+
+```text
+https://github.com/Q-E-D/Limbus-Company-IOS-Localization-Next/releases/download/reviewed-20261008/LimbusReviewed.module
+```
+
+[下载与校验记录](https://github.com/Q-E-D/Limbus-Company-IOS-Localization-Next/releases/tag/reviewed-20261008)
+
+模块和资源均固定到 `reviewed-20261008`，不会自动追随第三方 `latest`。发布新资源后需改用新版本模块；旧版本继续使用旧资源。此发布已做离线结构校验，尚未在 iPhone 上实测；字库限制、资源版本变化或客户端缓存可能影响效果。游戏若未下载新资源，不要直接清除游戏数据，先检查模块命中和下载记录。
 
 ## 已验证的格式
 

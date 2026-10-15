@@ -26,3 +26,11 @@ licensed under Apache-2.0:
   Licensed under Apache License 2.0.
   https://github.com/BYVoid/OpenCC
 
+This distribution also includes a modified, filtered OpenCC character mapping:
+mobile-safe-glyph-map.json, derived from STCharacters.txt and JPVariants.txt
+at commit 556ed22496d650bd0b13b6c163be9814637970ae (ver.1.1.9).
+Modifications: retain only single-target conversions into the observed mobile
+character reference, prefer Traditional Chinese, then Japanese variants;
+leave supported source characters and ambiguous conversions unchanged.
+See data/README.md and build_glyph_map.py for provenance and reproduction.
+

@@ -551,7 +551,8 @@ def main():
             report["experimental"] = True
             report["font_coverage"] = "reference-only; device not verified"
             if args.glyph_mode == "compatible":
-                report["text_warning"] = "Glyph substitutions include non-equivalent characters; output is not pure simplified Chinese"
+                report["text_warning"] = ("Explicit glyph substitutions applied; output is not pure simplified Chinese. "
+                                          "Mapping semantics and device font coverage require review.")
     if args.refresh_jp_hashes:
         report["refreshed_jp_hashes"] = refreshed_hashes
         report["normalized_manifest_sha256"] = normalized_manifest_sha256

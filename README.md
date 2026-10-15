@@ -8,6 +8,14 @@
 
 ### LLC 原文实验包
 
+出现方框时可试用独立的缺字兼容候选版 `llc-ios-20261015-r3-compat`：沿用 r2 的官方底包和 LLC 快照，按保守参考集合，仅对单一对应的简体字做繁体 / 日文变体降级。原文版 r2 保留，默认构建模式也不变。兼容版的参考集外字符由 1,447 种降为 484 种，这不是实机方框计数，仍需手机验证；不修改字体，不保证消除所有方框。关闭其他 Limbus 模块后添加：
+
+```text
+https://github.com/Q-E-D/Limbus-Company-IOS-Localization-Next/releases/download/llc-ios-20261015-r3-compat/LimbusReviewed.module
+```
+
+映射来源、跳过多义转换的策略及复现步骤见 [字符参考说明](data/README.md)；安装和对照验证见 [升级说明](docs/UPGRADE.md)。
+
 手机当前 `l20261015_xV9SErze50K09CmgQkCb` 资源目录请使用候选修订版 `llc-ios-20261015-r2`。它使用 10 月 15 日官方清单和日文底包，完整保留当前非 JP 条目，并把重写限定到该版本目录，避免旧清单覆盖以后游戏版本。译文仍为 LLC `2026100901`，未匹配内容保留日文；尚待连续启动验证重复下载是否消失。关闭旧模块后安装：
 
 ```text
@@ -90,7 +98,7 @@ python3 prepare_release.py \
 
 发布固定清单时，应追加 `--official-localize-root https://downloadcommon.limbuscompanycdn.org/lYYYYMMDD_VERSION/Assets`，使用日志中确认的实际版本 URL。这样两条重写仅匹配配套资源目录；游戏改用新目录后将使用官方资源，需重新审查和构建相应汉化包。输入 SHA-256 验证不证明 URL 与输入配套，发布前还须核对来源和报告。省略此选项保留旧版通配匹配行为，不适合跨游戏版本长期启用固定清单。
 
-如有人工审核的单字替换表，可用 `--glyph-mode compatible --glyph-map /path/to/map.json` 显式替换参考字库不含的字符。该替换可能改变词义、专名或语气，输出不会是严格的简体原文，必须逐项审校。仓库没有内置通用替换表，因为无法从字形相似可靠推出语义等价。
+可用 `--glyph-mode compatible --glyph-map data/mobile-safe-glyph-map.json` 显式启用内置保守映射，或提供自行审核的单字表。该替换可能影响词义、专名或语气，输出不再是严格的简体原文；内置表只接受固定 OpenCC 数据中的单一候选，不采用任意形似替换，但仍不能代替逐句审校或实际字体检查。
 
 之前构建的样例位于忽略目录 `work/llc-20261009-preserve-experimental`：输入 LLC ZIP SHA-256 为 `534ac2a4f020d7bde05a2d088b917fa24871d68b122927fc5b282a915a19d5ee`。它来自固定的 2026-10-09 资源快照，不代表 LLC 当前上游版本。样例匹配 2,330 个 JP 槽位、101,596 条记录；参考字符集有 4,620 字，仍发现 1,447 个未覆盖字符（按字符与文本字段组合计数，共命中 682,233 次；同一字在同一字段重复出现只计一次）。所以它是结构验证通过的实验构建，不可当作可发布或实机字库验证通过的版本。
 
@@ -102,7 +110,7 @@ python3 prepare_release.py \
 
 LLC 到 JP 槽位的合并、剧情说话人字段补全和资源重打包已实现；但实际字体文件提取/注入、完整简繁转换和 iPhone 字形验证没有实现。`data/mobile-font-charset.txt` 只是从观察到的资源推导出的覆盖下界，不是 iOS 字体本身。即使报告无缺字，也需用目标 iOS 版本、游戏版本和具体设备验证字形、下载及缓存行为。固定标签减少自动追随上游的变化，但 GitHub Release 附件仍可被有权限的人替换；模块不执行 SHA-256 校验。
 
-测试：`python3 -m unittest -v test_prepare_release.py test_llc_build.py`。
+测试：`python3 -m unittest -v test_prepare_release.py test_llc_build.py test_glyph_map.py`。
 
 ## 参考与许可
 

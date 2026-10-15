@@ -86,21 +86,43 @@ def _text_key(key):
     return key in TEXT_KEYS
 
 
-def adapt_text(value, key, charset, glyph_map, report):
+def load_text_fallbacks(path, charset, glyph_map):
+    """Load exact visible-field adaptations; preserve placeholders and markup."""
+    require(path.stat().st_size <= MAX_ASSET, "Text fallback file too large")
+    entries = parse_json(path.read_bytes())
+    require(isinstance(entries, dict) and 0 < len(entries) <= 10000,
+            "Text fallbacks must be a nonempty object with at most 10000 entries")
+    controls = re.compile(r"<[^>]+>|\{[^{}]*\}")
+    for source, replacement in entries.items():
+        require(isinstance(source, str) and source and isinstance(replacement, str)
+                and replacement and source != replacement,
+                "Text fallbacks must map distinct nonempty strings")
+        require(controls.findall(source) == controls.findall(replacement),
+                f"Text fallback changes formatting controls: {source}")
+        missing = sorted({c for c in replacement.translate(glyph_map)
+                          if _is_cjk(c) and c not in charset})
+        require(not missing, "Text fallback target is outside charset: " + "".join(missing))
+    return entries
+
+
+def adapt_text(value, key, charset, glyph_map, report, text_fallbacks=None):
     """Adapt only visible text leaves; keys, IDs and asset paths stay untouched."""
     if isinstance(value, str) and _text_key(key):
-        translated = value.translate(glyph_map)
+        fallback = text_fallbacks.get(value, value) if text_fallbacks else value
+        if fallback != value:
+            report.setdefault("text_fallbacks_applied", Counter())[value] += 1
+        translated = fallback.translate(glyph_map)
         missing = sorted({c for c in translated if c not in charset and _is_cjk(c)})
         for char in missing:
             report["missing_chars"][char] += 1
-        for source, target in zip(value, translated):
+        for source, target in zip(fallback, translated):
             if source != target:
                 report["mapped_chars"][f"{source}->{target}"] += 1
         return translated
     if isinstance(value, list):
-        return [adapt_text(item, key, charset, glyph_map, report) for item in value]
+        return [adapt_text(item, key, charset, glyph_map, report, text_fallbacks) for item in value]
     if isinstance(value, dict):
-        return {name: adapt_text(item, name, charset, glyph_map, report)
+        return {name: adapt_text(item, name, charset, glyph_map, report, text_fallbacks)
                 for name, item in value.items()}
     return value
 
@@ -178,15 +200,20 @@ def _merge_value(target, source, key, report, path=""):
 
 
 def build_overlay_from_llc(jp_zip_data, llc_zip_data, output_dir, charset_path,
-                           glyph_map_path=None, glyph_mode="preserve"):
+                           glyph_map_path=None, glyph_mode="preserve", text_fallbacks_path=None):
     """Create JP-slot JSON overlays from an LLC Chinese resource archive."""
-    charset = load_charset(charset_path)
     require(glyph_mode in {"preserve", "compatible"}, "Unknown glyph mode")
+    require(not text_fallbacks_path or glyph_mode == "compatible",
+            "Text fallbacks require compatible mode")
+    charset = load_charset(charset_path)
     glyph_map = load_glyph_map(glyph_map_path, charset) if glyph_map_path else {}
+    text_fallbacks = (load_text_fallbacks(text_fallbacks_path, charset, glyph_map)
+                      if text_fallbacks_path else {})
     report = {"matched_files": 0, "unmatched_jp_files": [],
               "unused_llc_files": [], "matched_rows": 0,
               "field_replacements": Counter(), "missing_chars": Counter(),
-              "mapped_chars": Counter(), "unmerged_paths": [],
+              "mapped_chars": Counter(), "text_fallbacks_applied": Counter(),
+              "unmerged_paths": [],
               "backfilled_files": [], "speaker_fields_added": Counter(),
               "unknown_story_models": Counter(), "glyph_mode": glyph_mode,
               "missing_glyph_examples": {}}
@@ -220,10 +247,12 @@ def build_overlay_from_llc(jp_zip_data, llc_zip_data, output_dir, charset_path,
                 _fill_speakers(merged, names, report)
             local_report = {"mapped_chars": Counter(), "missing_chars": Counter()}
             merged = adapt_text(merged, "dataList", charset,
-                                glyph_map if glyph_mode == "compatible" else {}, local_report)
+                                glyph_map if glyph_mode == "compatible" else {}, local_report,
+                                text_fallbacks)
             for char in local_report["missing_chars"]:
                 report["missing_glyph_examples"].setdefault(char, jp_name)
             report["mapped_chars"].update(local_report["mapped_chars"])
+            report["text_fallbacks_applied"].update(local_report.get("text_fallbacks_applied", {}))
             report["missing_chars"].update(local_report["missing_chars"])
             relative = jp_name.removeprefix("LocalizeTemp_jp/")
             destination = output_dir / relative
@@ -236,6 +265,7 @@ def build_overlay_from_llc(jp_zip_data, llc_zip_data, output_dir, charset_path,
             report[field] = dict(value)
     report["charset_size"] = len(charset)
     report["glyph_map_size"] = len(glyph_map)
+    report["unused_text_fallbacks"] = sorted(set(text_fallbacks) - set(report["text_fallbacks_applied"]))
     return report
 
 
@@ -500,6 +530,8 @@ def main():
                         help="Reviewed mobile glyph charset used with --llc-zip")
     parser.add_argument("--glyph-map", type=Path,
                         help="Missing-glyph map required for compatible mode; may alter meaning")
+    parser.add_argument("--text-fallbacks", type=Path,
+                        help="Optional exact visible-text adaptations; requires LLC compatible mode")
     parser.add_argument("--glyph-mode", choices=("preserve", "compatible"), default="preserve",
                         help="Preserve LLC text (default) or explicitly apply glyph substitutions")
     parser.add_argument("--allow-missing-glyphs", action="store_true",
@@ -510,6 +542,8 @@ def main():
     args = parser.parse_args()
     require(not (args.overlay_jp and args.llc_zip),
             "Choose --overlay-jp or --llc-zip, not both")
+    require(not args.text_fallbacks or (args.llc_zip and args.glyph_mode == "compatible"),
+            "Text fallbacks require --llc-zip and compatible mode")
     if args.llc_zip:
         require(args.llc_zip_sha256 and args.font_charset,
                 "--llc-zip requires --llc-zip-sha256 and --font-charset")
@@ -535,8 +569,11 @@ def main():
                 inputs["font_charset"] = hashlib.sha256(args.font_charset.read_bytes()).hexdigest()
                 if args.glyph_map:
                     inputs["glyph_map"] = hashlib.sha256(args.glyph_map.read_bytes()).hexdigest()
+                if args.text_fallbacks:
+                    inputs["text_fallbacks"] = hashlib.sha256(args.text_fallbacks.read_bytes()).hexdigest()
                 overlay_report = build_overlay_from_llc(
-                    zip_data, llc_data, overlay_dir, args.font_charset, args.glyph_map, args.glyph_mode)
+                    zip_data, llc_data, overlay_dir, args.font_charset, args.glyph_map,
+                    args.glyph_mode, args.text_fallbacks)
                 if overlay_report["missing_chars"] and not args.allow_missing_glyphs:
                     raise ValueError("Uncovered output glyphs: "
                                      + "".join(sorted(overlay_report["missing_chars"]))
@@ -553,6 +590,9 @@ def main():
             if args.glyph_mode == "compatible":
                 report["text_warning"] = ("Explicit glyph substitutions applied; output is not pure simplified Chinese. "
                                           "Mapping semantics and device font coverage require review.")
+            if args.text_fallbacks:
+                report["text_adaptation_warning"] = ("Exact visible-field adaptations applied, including wording "
+                                                      "and proper names; output is not verbatim LLC text.")
     if args.refresh_jp_hashes:
         report["refreshed_jp_hashes"] = refreshed_hashes
         report["normalized_manifest_sha256"] = normalized_manifest_sha256

@@ -34,7 +34,10 @@ def read_dictionary(path, name):
 
 def build_map(simplified_to_traditional, japanese_variants, charset):
     result = {}
-    for source, targets in sorted(simplified_to_traditional.items()):
+    for source in sorted(simplified_to_traditional.keys() | japanese_variants.keys()):
+        # Some useful Japanese variants (e.g. 增→増) have no STCharacters
+        # entry because their Chinese simplified/traditional form is identical.
+        targets = simplified_to_traditional.get(source, [source])
         if len(source) != 1 or source in charset or len(targets) != 1:
             continue
         traditional = targets[0]

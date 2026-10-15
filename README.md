@@ -8,6 +8,14 @@
 
 ### LLC 原文实验包
 
+四张截图已定位到 `复、吗、卡、你、胜、嗯、哐、哧` 缺字。新增 `llc-ios-20261015-r4-compat` 候选版：补上独立日文变体映射，并用 6 条整字段适配处理截图中的复制按钮、名片句型、卡戎姓名及三条开场台词。**它含少量措辞改写及官方英文名 `Charon`，不再只是单字简繁转换。** 目标文本静态检查通过，其他场景仍可能有方框，未做新包的手机渲染验证。关闭其他 Limbus 模块后安装：
+
+```text
+https://github.com/Q-E-D/Limbus-Company-IOS-Localization-Next/releases/download/llc-ios-20261015-r4-compat/LimbusReviewed.module
+```
+
+具体适配及限制见 [字符参考说明](data/README.md) 和 [升级说明](docs/UPGRADE.md)。r3 与 r2 仍保留作对照。
+
 出现方框时可试用独立的缺字兼容候选版 `llc-ios-20261015-r3-compat`：沿用 r2 的官方底包和 LLC 快照，按保守参考集合，仅对单一对应的简体字做繁体 / 日文变体降级。原文版 r2 保留，默认构建模式也不变。兼容版的参考集外字符由 1,447 种降为 484 种，这不是实机方框计数，仍需手机验证；不修改字体，不保证消除所有方框。关闭其他 Limbus 模块后添加：
 
 ```text
@@ -100,6 +108,8 @@ python3 prepare_release.py \
 
 可用 `--glyph-mode compatible --glyph-map data/mobile-safe-glyph-map.json` 显式启用内置保守映射，或提供自行审核的单字表。该替换可能影响词义、专名或语气，输出不再是严格的简体原文；内置表只接受固定 OpenCC 数据中的单一候选，不采用任意形似替换，但仍不能代替逐句审校或实际字体检查。
 
+在上述 LLC 兼容构建中另加 `--text-fallbacks data/mobile-text-fallbacks.json` 可选择截图定位后的整字段措辞适配；这与单字简繁转换是两类改动，具体内容、来源与保护条件见 `data/README.md`。
+
 之前构建的样例位于忽略目录 `work/llc-20261009-preserve-experimental`：输入 LLC ZIP SHA-256 为 `534ac2a4f020d7bde05a2d088b917fa24871d68b122927fc5b282a915a19d5ee`。它来自固定的 2026-10-09 资源快照，不代表 LLC 当前上游版本。样例匹配 2,330 个 JP 槽位、101,596 条记录；参考字符集有 4,620 字，仍发现 1,447 个未覆盖字符（按字符与文本字段组合计数，共命中 682,233 次；同一字在同一字段重复出现只计一次）。所以它是结构验证通过的实验构建，不可当作可发布或实机字库验证通过的版本。
 
 需要手工覆盖 JSON 时仍可追加 `--overlay-jp /path/to/adapted-jp`。目录使用 ZIP 中 `LocalizeTemp_jp/` 之后的相对路径，例如 `JP_AbDlg_DonQuixote.json` 或 `StoryData/JP_….json`，只能覆盖已有槽位。
@@ -110,7 +120,7 @@ python3 prepare_release.py \
 
 LLC 到 JP 槽位的合并、剧情说话人字段补全和资源重打包已实现；但实际字体文件提取/注入、完整简繁转换和 iPhone 字形验证没有实现。`data/mobile-font-charset.txt` 只是从观察到的资源推导出的覆盖下界，不是 iOS 字体本身。即使报告无缺字，也需用目标 iOS 版本、游戏版本和具体设备验证字形、下载及缓存行为。固定标签减少自动追随上游的变化，但 GitHub Release 附件仍可被有权限的人替换；模块不执行 SHA-256 校验。
 
-测试：`python3 -m unittest -v test_prepare_release.py test_llc_build.py test_glyph_map.py`。
+测试：`python3 -m unittest -v`。
 
 ## 参考与许可
 

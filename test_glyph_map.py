@@ -9,10 +9,15 @@ import prepare_release as p
 
 
 class GlyphMapTests(unittest.TestCase):
+    def test_direct_japanese_variants_do_not_require_simplified_dictionary_entry(self):
+        mapping = g.build_map({}, {"增": ["増"], "查": ["査"],
+                                   "你": ["伱", "儞"]}, set("増査伱"))
+        self.assertEqual(mapping, {"增": "増", "查": "査"})
+
     def test_traditional_preferred_then_single_japanese_variant(self):
         mapping = g.build_map({"对": ["對"], "说": ["說"]},
                               {"對": ["対"], "說": ["説"]}, set("對対説"))
-        self.assertEqual(mapping, {"对": "對", "说": "説"})
+        self.assertEqual(mapping, {"对": "對", "说": "説", "說": "説"})
 
     def test_ambiguous_supported_and_uncovered_characters_are_not_guessed(self):
         mapping = g.build_map({"发": ["發", "髮"], "后": ["後"],

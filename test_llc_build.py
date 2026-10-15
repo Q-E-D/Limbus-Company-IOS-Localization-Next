@@ -105,6 +105,18 @@ class LLCBuildRegressionTests(unittest.TestCase):
         self.assertEqual(report["missing_glyph_examples"],
                          {"你": "LocalizeTemp_jp/JP_Test.json"})
 
+    def test_exact_text_fallback_precedes_glyph_map_and_reports_unused_entries(self):
+        path = self.root / "text-fallbacks.json"
+        path.write_text('{"你":"中文","unused":"中文"}', encoding="utf-8")
+        rows, report = self.single([{"id": 1, "name": "old"}],
+                                   [{"id": 1, "name": "你"}],
+                                   glyph_mode="compatible", text_fallbacks_path=path)
+        self.assertEqual(rows[0]["name"], "中文")
+        self.assertEqual(report["text_fallbacks_applied"], {"你": 1})
+        self.assertEqual(report["mapped_chars"], {})
+        self.assertEqual(report["missing_chars"], {})
+        self.assertEqual(report["unused_text_fallbacks"], ["unused"])
+
     def test_positional_length_mismatch_and_unknown_arrays_are_preserved(self):
         rows, report = self.single(
             [{"id": 1, "name": "old", "options": [{"desc": "original"}],

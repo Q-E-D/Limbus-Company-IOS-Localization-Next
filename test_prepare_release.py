@@ -140,6 +140,62 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(report["missing_chars"], {})
         self.assertEqual(report["matched_rows"], 1)
 
+    def companion_fixture(self, locale="en", name=None):
+        zip_data, manifest_data = self.fixture()
+        manifest = json.loads(manifest_data)
+        raw = b'{"text":"new"}\r\n'
+        key = p.PREFIX + locale + "/Test.json"
+        manifest["Files"][key] = {"Hash": "0" * 32, "Size": 999, "Crc": 0}
+        data = io.BytesIO()
+        with zipfile.ZipFile(data, "w") as archive:
+            archive.writestr(name or "LocalizeTemp_" + locale + "/Test.json", raw)
+        return data.getvalue(), json.dumps(manifest).encode(), raw, key
+
+    def test_companion_repairs_hash_and_size_without_changing_other_entries(self):
+        for locale in ("en", "kr"):
+            with self.subTest(locale=locale):
+                archive, manifest, raw, key = self.companion_fixture(locale)
+                result, changes = p.refresh_companion_locale(archive, manifest, locale)
+                before, after = json.loads(manifest), json.loads(result)
+                self.assertEqual(after["Files"][key],
+                                 {"Hash": p.game_hash(raw), "Size": len(raw), "Crc": 0})
+                self.assertEqual(len(changes), 1)
+                self.assertEqual(changes[0]["before"], before["Files"][key])
+                self.assertEqual(changes[0]["after"], after["Files"].pop(key))
+                before["Files"].pop(key)
+                self.assertEqual(before, after)
+                self.assertEqual(p.refresh_companion_locale(archive, result, locale)[1], [])
+
+    def test_companion_rejects_wrong_root_or_file_set(self):
+        for name in ("LocalizeTemp_kr/Test.json", "LocalizeTemp_en/Unknown.json",
+                     "LocalizeTemp_en/../Test.json"):
+            with self.subTest(name=name):
+                archive, manifest, _, _ = self.companion_fixture(name=name)
+                with self.assertRaises(ValueError):
+                    p.refresh_companion_locale(archive, manifest, "en")
+        archive, manifest, _, _ = self.companion_fixture()
+        value = json.loads(manifest)
+        value["Files"][p.PREFIX + "en/Missing.json"] = {"Hash": "1", "Size": 2, "Crc": 0}
+        with self.assertRaisesRegex(ValueError, "file set mismatch"):
+            p.refresh_companion_locale(archive, json.dumps(value).encode(), "en")
+
+    def test_companion_rejects_invalid_schema_and_unsupported_locale(self):
+        archive, manifest, _, key = self.companion_fixture()
+        with self.assertRaisesRegex(ValueError, "must be en or kr"):
+            p.refresh_companion_locale(archive, manifest, "jp")
+        for value in ({}, [], {"Files": None}):
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "manifest schema"):
+                    p.refresh_companion_locale(archive, json.dumps(value).encode(), "en")
+        for entry in (None, {}, {"Hash": "invalid", "Size": 1, "Crc": 0},
+                      {"Hash": "1", "Size": True, "Crc": 0},
+                      {"Hash": "1", "Size": 1, "Crc": False}):
+            value = json.loads(manifest)
+            value["Files"][key] = entry
+            with self.subTest(entry=entry):
+                with self.assertRaisesRegex(ValueError, "companion manifest entry"):
+                    p.refresh_companion_locale(archive, json.dumps(value).encode(), "en")
+
 
 if __name__ == "__main__":
     unittest.main()

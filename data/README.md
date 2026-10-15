@@ -25,12 +25,15 @@ cmp data/mobile-safe-glyph-map.json /tmp/mobile-safe-glyph-map-rebuilt.json
 
 ## 截图定位后的整字段文本适配
 
-`mobile-text-fallbacks.json` 是另行选择的 6 条人工适配，**包含措辞改写与官方英文姓名，不是纯简繁转换**。来源为 LLC `2026100901` 及官方 `l20261015_xV9SErze50K09CmgQkCb` 资源，按用户 2026-10-15 提供的四处界面定位。译文及其修改继续适用 CC BY-NC-SA 4.0，受底层游戏资源权利限制。没有分发用户截图、账号信息或日志。
+`mobile-text-fallbacks.json` 是另行选择的 10 条人工适配，**包含措辞改写与官方英文姓名，不是纯简繁转换**。来源为 LLC `2026100901` 及官方 `l20261015_xV9SErze50K09CmgQkCb` 资源，按用户提供的界面定位。译文及其修改继续适用 CC BY-NC-SA 4.0，受底层游戏资源权利限制。没有分发用户截图、账号信息或日志。
 
 - `JP_UserInfo_Friends.json` / `Uid_Copy`：复制 → 複製。
 - `JP_IntroductionPreset.json` / `introduce_sentence_1` 及 `StoryData/JP_S101B.json` / `id=1`：可以吗？ → 可以？；保留模板 `{0}` 和完整句子其余内容。
 - `StoryData/JP_S101B.json` / `id=3`：当你想战胜枯燥感时 → 要克服枯燥感。对应官方日文原义为克服无聊，避免截图实证缺字“你、胜”。
 - 同文件 / `id=8`：嗯。哐哧哐哧。 → 唔。轟隆轟隆。对应官方 `うん、がたんがたん。`，是确认回应与行车拟声的兼容改写。
 - `ScenarioModelCodes-AutoCreated.json` / `id=카론` 的姓名“卡戎”及精确同值的说话人字段：改用官方英文名 `Charon`。已读取配套官方英文 ZIP 核实该记录的 `Hash` 与 `Size`；英文 ZIP SHA-256 为 `851abb93f8d1fdc26f0d83268095e535dd1aabc6c70efb7b6d23c69b68844897`。不改角色 ID，也不在长句内全局替换“卡”。
+- r5：`JP_Items.json` / `id=1/2/3` 同值说明中的“能够”改为“可”，术语“脑啡肽”使用配套官方英文 `Enkephalin`，避开截图缺字“够、肽”。
+- r5：`StoryData/JP_S101B.json` / `id=17` 省略指向对话人的“你”，并把“对吧”改为“对不对”；`id=35` 改为“有没有意识到现在声音最大的是谁？”。这两句是保持对话含义的措辞调整，避免“你、吧、吵、呢”缺字。
+- r5：姓名“格里高尔”按配套英文 `EN_ScenarioModelCodes-AutoCreated.json` / `id=그레고르` 使用 `Gregor`，避免“尔”缺字；整字段适配共命中 1,991 次，角色 ID 不变。
 
 用 `--text-fallbacks data/mobile-text-fallbacks.json` 显式选择，只允许 `--llc-zip` 配合 `--glyph-mode compatible`。先整字段精确匹配，再执行单字映射；仅作用于既有可见文本白名单，不改变 ID、路径、未知字段或其他句子的子串。加载时检查格式占位符/标签不变，且最终 CJK 字符都在参考集内；命中次数和未使用条目写入报告。默认不启用，不能据此声称完整原文或全游戏无方框。

@@ -8,6 +8,12 @@
 
 ### LLC 原文实验包
 
+当前候选版为 `llc-ios-20261016-r5-compat`：基于重新下载的配套官方资源，修正英文、韩文清单与实际 ZIP 的 Hash/Size 不一致，并补充 r4 截图中的两句剧情、月狂石说明及 Gregor 姓名适配。35 项测试及最终资源静态核验通过；重复启动和实际字体渲染仍待手机验证。关闭旧 Limbus 模块，只启用新版：
+
+```text
+https://github.com/Q-E-D/Limbus-Company-IOS-Localization-Next/releases/download/llc-ios-20261016-r5-compat/LimbusReviewed.module
+```
+
 四张截图已定位到 `复、吗、卡、你、胜、嗯、哐、哧` 缺字。新增 `llc-ios-20261015-r4-compat` 候选版：补上独立日文变体映射，并用 6 条整字段适配处理截图中的复制按钮、名片句型、卡戎姓名及三条开场台词。**它含少量措辞改写及官方英文名 `Charon`，不再只是单字简繁转换。** 目标文本静态检查通过，其他场景仍可能有方框，未做新包的手机渲染验证。关闭其他 Limbus 模块后安装：
 
 ```text
@@ -62,7 +68,7 @@ https://github.com/Q-E-D/Limbus-Company-IOS-Localization-Next/releases/download/
 
 - ZIP 内路径为 `LocalizeTemp_jp/…/JP_*.json`，对应清单中的 `Assets/Resources_moved/Localize/jp/…/JP_*.json`。
 - `Size` 是文件原始字节数；`Hash` 是将 CRLF 换行替换为 LF 后的 MD5。已核对 ghcruise `v1.116.2-alpha` 全部 2,412 个 JP 文件，全部匹配。
-- 清单中非 JP 资源、版本、EncryptKey/EncryptIV 与 Crc 原样保留。它们的游戏内部语义没有重新实现。
+- 默认保留非 JP 条目；显式指定 `--companion-locale en /path/to/en.zip <sha256>`（或 `kr`，可重复）时，仅按固定且文件集合一致的官方 ZIP 重建对应语言的 Hash/Size。版本、EncryptKey/EncryptIV 与 Crc 保留。它们的游戏内部语义没有重新实现。
 - 生成的模块仅重定向语言 ZIP 与清单，限制游戏 CDN 域名，支持查询参数，指向你的固定 Release 标签。
 
 ## 使用

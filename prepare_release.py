@@ -446,6 +446,44 @@ def validate(zip_data, manifest_data):
             "limits": "Structure only; no semantic guarantee, actual font replacement, or iOS test"}
 
 
+def refresh_companion_locale(zip_data, manifest_data, locale):
+    """Reconcile a pinned, matching official EN/KR ZIP with its stale catalog."""
+    require(locale in {"en", "kr"}, "Companion locale must be en or kr")
+    manifest = parse_json(manifest_data)
+    require(isinstance(manifest, dict)
+            and set(manifest) == {"Version", "EncryptKey", "EncryptIV", "Files",
+                                 "SteamUpdateFiles"}, "Unknown manifest schema")
+    require(isinstance(manifest["Files"], dict) and manifest["Files"],
+            "Empty/invalid file map")
+    prefix = PREFIX + locale + "/"
+    root = "LocalizeTemp_" + locale + "/"
+    expected = {name for name in manifest["Files"] if name.startswith(prefix)}
+    require(expected, "Manifest has no companion locale entries")
+    seen, changes = set(), []
+    with zipfile.ZipFile(io.BytesIO(zip_data)) as archive:
+        for info in _checked_members(archive):
+            safe_path(info.filename)
+            require(info.filename.startswith(root), "Unexpected companion ZIP root")
+            name = prefix + info.filename[len(root):]
+            require(name in expected, "Unknown companion file: " + name)
+            seen.add(name)
+            data = archive.read(info)
+            require(isinstance(parse_json(data), dict), "Expected companion JSON object")
+            entry = manifest["Files"][name]
+            require(isinstance(entry, dict) and set(entry) == {"Hash", "Size", "Crc"}
+                    and isinstance(entry["Hash"], str)
+                    and re.fullmatch(r"[0-9a-fA-F]{1,32}", entry["Hash"]) is not None
+                    and type(entry["Size"]) is int and 0 <= entry["Size"] <= MAX_EXPANDED
+                    and type(entry["Crc"]) is int and entry["Crc"] == 0,
+                    "Unexpected companion manifest entry")
+            updated = {"Hash": game_hash(data), "Size": len(data), "Crc": 0}
+            if entry != updated:
+                changes.append({"path": name, "before": entry, "after": updated})
+                manifest["Files"][name] = updated
+        require(seen == expected, "Companion ZIP/manifest file set mismatch")
+    return (json.dumps(manifest, ensure_ascii=False, indent=4) + "\n").encode(), changes
+
+
 def repack(zip_data, manifest_data, overlay):
     """Apply already font-adapted JSONs named like JP_*.json, preserving slots."""
     require(overlay.is_dir() and not overlay.is_symlink(), "Expected overlay directory")
@@ -538,6 +576,9 @@ def main():
                         help="Stage an experimental package even when reference coverage is incomplete")
     parser.add_argument("--refresh-jp-hashes", action="store_true",
                         help="Recompute JP Hash fields only when paths and sizes match")
+    parser.add_argument("--companion-locale", action="append", nargs=3, default=[],
+                        metavar=("LOCALE", "ZIP", "SHA256"),
+                        help="Reconcile pinned official en/kr ZIP hashes and sizes; repeatable")
     parser.add_argument("--out", required=True, type=Path, help="New staging directory")
     args = parser.parse_args()
     require(not (args.overlay_jp and args.llc_zip),
@@ -557,6 +598,13 @@ def main():
     refreshed_hashes = []
     if args.refresh_jp_hashes:
         manifest_data, refreshed_hashes = refresh_jp_hashes(zip_data, manifest_data)
+    companion_changes = {}
+    for locale, path, digest in args.companion_locale:
+        require(locale not in companion_changes, "Duplicate companion locale")
+        companion = read_asset(Path(path), digest)
+        manifest_data, changes = refresh_companion_locale(companion, manifest_data, locale)
+        inputs["official_" + locale + ".zip"] = hashlib.sha256(companion).hexdigest()
+        companion_changes[locale] = changes
     report = validate(zip_data, manifest_data)
     normalized_manifest_sha256 = hashlib.sha256(manifest_data).hexdigest()
     if args.overlay_jp or args.llc_zip:
@@ -597,6 +645,8 @@ def main():
         report["refreshed_jp_hashes"] = refreshed_hashes
         report["normalized_manifest_sha256"] = normalized_manifest_sha256
     report["input_sha256"] = inputs
+    if companion_changes:
+        report["companion_locale_changes"] = companion_changes
     report["sha256"] = {"localize_jp.zip": hashlib.sha256(zip_data).hexdigest(),
                          "manifest.json": hashlib.sha256(manifest_data).hexdigest()}
     report["target"] = f"{args.repo}@{args.tag}"

@@ -70,6 +70,12 @@ class TextFallbackTests(unittest.TestCase):
             ("content", "毕竟，当你想战胜枯燥感时，没有比闭上双眼更高效的选择。",
              "畢竟，要克服枯燥感，没有比閉上双眼更高效的選擇。"),
             ("content", "嗯。哐哧哐哧。", "唔。轟隆轟隆。"),
+            ("teller", "格里高尔", "Gregor"),
+            ("desc", "具象为蔷薇形态的结晶。能够用于提取或是购买脑啡肽盒子。",
+             "具象為薔薇形態的結晶。可用于提取或是購買 Enkephalin 盒子。"),
+            ("content", "……你刚才是想叫我“虫男”，对吧？", "……剛才是想叫我“虫男”，對不對？"),
+            ("content", "……我说啊，你有没有意识到现在是你最吵呢？",
+             "……我説啊，有没有意識到現在声音最大的是誰？"),
         ]
         for field, source, expected in samples:
             with self.subTest(source=source):

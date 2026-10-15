@@ -4,7 +4,7 @@
 
 此工具支持验证已审查资源、将 LocalizeLimbusCompany (LLC) 中文 JSON 按稳定 ID 合并进日文资源槽位，并重新生成 ZIP 与清单。它只改文本资源，不修改或嵌入游戏字体；字库文件目前以从已观察移动端资源推导的覆盖下界作为参考。仅用 Python 3 标准库；不联网、不安装证书、不运行游戏、不发布 GitHub Release。
 
-构建工具版本：`v0.2.0-alpha.1`（实验版源码标签）。该标签不提供新的 Shadowrocket 资源附件，手机安装地址仍为下面的 `reviewed-20261008`。源码升级、资源升级与回退步骤见 [升级验证说明](docs/UPGRADE.md)。
+构建工具版本：`v0.2.0-alpha.2`（实验版源码标签，补齐参考数据署名与许可）。该标签不提供新的 Shadowrocket 资源附件，手机安装地址仍为下面的 `reviewed-20261008`。源码升级、资源升级与回退步骤见 [升级验证说明](docs/UPGRADE.md)。
 
 ## Shadowrocket 安装
 
@@ -86,6 +86,6 @@ LLC 到 JP 槽位的合并、剧情说话人字段补全和资源重打包已实
 
 - 原模块与样本：[ghcruise/LimbusCompany-IOS-Localization](https://github.com/ghcruise/LimbusCompany-IOS-Localization)，CC BY-NC-SA 4.0。
 - 中文译文上游：[LocalizeLimbusCompany](https://github.com/LocalizeLimbusCompany/LocalizeLimbusCompany)，CC BY-NC-SA 4.0。
-- 完整构建参考：[TIMER-err/Limbus-Company-Mobile-Localization](https://github.com/TIMER-err/Limbus-Company-Mobile-Localization/tree/36671de080eca2567c4e5625c20943de207b6698)，公开字形映射、覆盖和打包流程。此原型为独立编写，未复制其源码或字库数据。
+- 完整构建参考：[TIMER-err/Limbus-Company-Mobile-Localization](https://github.com/TIMER-err/Limbus-Company-Mobile-Localization/tree/36671de080eca2567c4e5625c20943de207b6698)，公开字形映射、覆盖和打包流程。Python 构建工具为独立编写；参考字符集的来源、用途和许可见 [data/README.md](data/README.md)。
 
 本目录不包含第三方译文、游戏资源或证书。资源重新发布时应遵守相关许可；本地生成的检查报告不是安全认证。

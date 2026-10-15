@@ -1,8 +1,10 @@
 # 升级与验证
 
-## v0.2.0-alpha.1
+## v0.2.0-alpha.2
 
 此版本标记 LLC 译文合并、剧情字段补齐、字形参考检查和确定性打包工具的源码状态。19 项单元测试通过；没有游戏字体注入，也没有新的手机可安装资源附件。
+
+`v0.2.0-alpha.1` 为初始实现标签；`v0.2.0-alpha.2` 补齐参考字符数据的来源与许可说明，不改变打包行为。两个标签均保留。
 
 已安装的 `reviewed-20261008` 模块继续使用原资源。更新模块或拉取源码不会自动切换到 LLC 实验包，不要把源码标签拼成 Release 附件地址。
 
@@ -12,8 +14,8 @@
 
 ```sh
 git fetch origin --tags
-git show --stat v0.2.0-alpha.1
-git switch --detach v0.2.0-alpha.1
+git show --stat v0.2.0-alpha.2
+git switch --detach v0.2.0-alpha.2
 python3 -m unittest -v test_prepare_release.py test_llc_build.py
 python3 -m py_compile prepare_release.py test_prepare_release.py test_llc_build.py
 ```

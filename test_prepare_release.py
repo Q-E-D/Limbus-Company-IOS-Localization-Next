@@ -76,6 +76,27 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
                 p.read_asset(path, "0" * 64)
 
+    def test_module_pins_official_version_to_prevent_stale_catalog_rewrites(self):
+        root = "https://downloadcommon.limbuscompanycdn.org/l20261015_version/Assets"
+        module = p.make_module("owner/repo", "test-1", root)
+        rules = module.split("[URL Rewrite]\n", 1)[1].split("\n\n", 1)[0].splitlines()
+        zip_rule, manifest_rule = [line.split(" ", 1)[0] for line in rules]
+        for rule, path in [(zip_rule, "/Resources_moved/Localize/localize_jp.zip"),
+                           (manifest_rule, "/LocalizePatch/LocalizePatchInfo.json")]:
+            self.assertRegex(root + path, rule)
+            self.assertRegex(root + path + "?v=1", rule)
+            self.assertNotRegex(root.replace("20261015", "20261022") + path, rule)
+            self.assertNotRegex(root.replace("_version", "_other") + path, rule)
+            self.assertNotRegex(root.replace("downloadcommon", "downloadios") + path, rule)
+        self.assertNotRegex(root + "/Resources_moved/Localize/localize_en.zip", zip_rule)
+        self.assertIn("hostname = %APPEND% downloadcommon.limbuscompanycdn.org", module)
+        self.assertNotIn("*.limbuscompanycdn.org", module)
+        for invalid in [root + "/", root + "?x=1", root.replace("https:", "http:"),
+                        root.replace("downloadcommon.limbuscompanycdn.org", "example.com"),
+                        root + "\n[Rule]"]:
+            with self.assertRaisesRegex(ValueError, "versioned official"):
+                p.make_module("owner/repo", "test-1", invalid)
+
     def test_refresh_jp_hashes_requires_same_paths_and_sizes(self):
         zip_data, manifest_data = self.fixture()
         manifest = json.loads(manifest_data)

@@ -8,6 +8,14 @@
 
 ### LLC 原文实验包
 
+手机当前 `l20261015_xV9SErze50K09CmgQkCb` 资源目录请使用候选修订版 `llc-ios-20261015-r2`。它使用 10 月 15 日官方清单和日文底包，完整保留当前非 JP 条目，并把重写限定到该版本目录，避免旧清单覆盖以后游戏版本。译文仍为 LLC `2026100901`，未匹配内容保留日文；尚待连续启动验证重复下载是否消失。关闭旧模块后安装：
+
+```text
+https://github.com/Q-E-D/Limbus-Company-IOS-Localization-Next/releases/download/llc-ios-20261015-r2/LimbusReviewed.module
+```
+
+诊断证据与路由建议见 [升级验证说明](docs/UPGRADE.md)。
+
 独立资源预发布版本：`llc-experimental-20261015`，使用固定的 LLC `2026100901` 快照与官方日文资源构建，保留原文、不应用字形替换。不是最新译文或已完成 iPhone 验证的稳定包。参考字符集合未覆盖 1,447 种输出字符，可能有缺字/方框；未合并部分保留日文。
 
 在 Shadowrocket 模块页关闭旧汉化模块，再添加并启用此地址：
@@ -79,6 +87,8 @@ python3 prepare_release.py \
 ```
 
 `--refresh-jp-hashes` 只在 ZIP/manifest 路径、文件集合和原始大小都匹配时重算 JP Hash。默认 `--glyph-mode preserve` 原样保留 LLC 字符，不会把繁體自動轉成簡體；若覆盖参考中有缺字，构建默认失败。`--allow-missing-glyphs` 只用于本地实验包，不代表这些字在 iPhone 上可显示。
+
+发布固定清单时，应追加 `--official-localize-root https://downloadcommon.limbuscompanycdn.org/lYYYYMMDD_VERSION/Assets`，使用日志中确认的实际版本 URL。这样两条重写仅匹配配套资源目录；游戏改用新目录后将使用官方资源，需重新审查和构建相应汉化包。输入 SHA-256 验证不证明 URL 与输入配套，发布前还须核对来源和报告。省略此选项保留旧版通配匹配行为，不适合跨游戏版本长期启用固定清单。
 
 如有人工审核的单字替换表，可用 `--glyph-mode compatible --glyph-map /path/to/map.json` 显式替换参考字库不含的字符。该替换可能改变词义、专名或语气，输出不会是严格的简体原文，必须逐项审校。仓库没有内置通用替换表，因为无法从字形相似可靠推出语义等价。
 

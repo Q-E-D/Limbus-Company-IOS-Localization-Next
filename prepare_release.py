@@ -452,21 +452,31 @@ def repack(zip_data, manifest_data, overlay):
                               + "\n").encode("utf-8"), changed
 
 
-def make_module(repo, tag):
+def make_module(repo, tag, official_localize_root=None):
     require(re.fullmatch(r"[A-Za-z0-9_-]+/[A-Za-z0-9_.-]+", repo)
             is not None, "Expected GitHub owner/repository")
     require(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", tag) is not None
             and tag.lower() != "latest", "Expected a fixed release tag")
     base = f"https://github.com/{repo}/releases/download/{tag}"
+    zip_rule = r"^https://[^/]+\.limbuscompanycdn\.org/[^?]*localize_jp\.zip(?:\?.*)?$"
+    manifest_rule = r"^https://downloadcommon\.limbuscompanycdn\.org/[^?]*LocalizePatchInfo\.json(?:\?.*)?$"
+    mitm_host = "*.limbuscompanycdn.org"
+    if official_localize_root is not None:
+        # A fixed manifest must never replace a later game's localization catalog.
+        require(re.fullmatch(
+            r"https://downloadcommon\.limbuscompanycdn\.org/l[0-9]{8}_[A-Za-z0-9_-]+/Assets",
+            official_localize_root) is not None,
+            "Expected a versioned official localization root ending in /Assets")
+        zip_rule = "^" + re.escape(official_localize_root + "/Resources_moved/Localize/localize_jp.zip") + r"(?:\?.*)?$"
+        manifest_rule = "^" + re.escape(official_localize_root + "/LocalizePatch/LocalizePatchInfo.json") + r"(?:\?.*)?$"
+        mitm_host = "downloadcommon.limbuscompanycdn.org"
     return (
         "#!name=Limbus localization - reviewed release\n"
         f"#!desc=Fixed release {repo}@{tag}; staged offline\n\n"
         "[URL Rewrite]\n"
-        r"^https://[^/]+\.limbuscompanycdn\.org/[^?]*localize_jp\.zip(?:\?.*)?$ "
-        + base + "/localize_jp.zip 302\n"
-        r"^https://downloadcommon\.limbuscompanycdn\.org/[^?]*LocalizePatchInfo\.json(?:\?.*)?$ "
-        + base + "/manifest.json 302\n\n"
-        "[MITM]\nhostname = %APPEND% *.limbuscompanycdn.org\n"
+        + zip_rule + " " + base + "/localize_jp.zip 302\n"
+        + manifest_rule + " " + base + "/manifest.json 302\n\n"
+        + "[MITM]\nhostname = %APPEND% " + mitm_host + "\n"
     )
 
 
@@ -478,6 +488,8 @@ def main():
     parser.add_argument("--manifest-sha256", required=True)
     parser.add_argument("--repo", required=True, help="Your GitHub owner/repository")
     parser.add_argument("--tag", required=True, help="Your fixed release tag")
+    parser.add_argument("--official-localize-root",
+                        help="Pin rewrites to the reviewed official version URL ending in /Assets")
     parser.add_argument("--overlay-jp", type=Path,
                         help="Optional prebuilt JP JSON overlay directory")
     parser.add_argument("--llc-zip", type=Path,
@@ -503,7 +515,7 @@ def main():
                 "--llc-zip requires --llc-zip-sha256 and --font-charset")
         require(args.glyph_mode != "compatible" or args.glyph_map,
                 "Compatible mode requires --glyph-map")
-    module = make_module(args.repo, args.tag)
+    module = make_module(args.repo, args.tag, args.official_localize_root)
     zip_data = read_asset(args.zip, args.zip_sha256)
     manifest_data = read_asset(args.manifest, args.manifest_sha256)
     inputs = {"localize_jp.zip": hashlib.sha256(zip_data).hexdigest(),
@@ -547,6 +559,8 @@ def main():
     report["sha256"] = {"localize_jp.zip": hashlib.sha256(zip_data).hexdigest(),
                          "manifest.json": hashlib.sha256(manifest_data).hexdigest()}
     report["target"] = f"{args.repo}@{args.tag}"
+    if args.official_localize_root:
+        report["official_localize_root"] = args.official_localize_root
     args.out.mkdir(parents=True, exist_ok=False)
     (args.out / "localize_jp.zip").write_bytes(zip_data)
     (args.out / "manifest.json").write_bytes(manifest_data)

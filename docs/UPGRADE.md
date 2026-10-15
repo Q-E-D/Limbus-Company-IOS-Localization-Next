@@ -8,6 +8,16 @@
 
 已安装的 `reviewed-20261008` 模块继续使用原资源。更新模块或拉取源码不会自动切换到 LLC 实验包，不要把源码标签拼成 Release 附件地址。
 
+## 可安装实验包 llc-experimental-20261015
+
+该资源版本与源码标签独立，使用 LLC `2026100901` 固定快照重新构建，保留原文且不做字形替换。模块地址：
+
+```text
+https://github.com/Q-E-D/Limbus-Company-IOS-Localization-Next/releases/download/llc-experimental-20261015/LimbusReviewed.module
+```
+
+这是供实机验证的预发布包。覆盖 2,330 个日文槽位，匹配 101,596 条记录；有 1,447 种字符未被观察参考集合覆盖，实际字库支持与当前游戏兼容性未验证。请按本文手机测试步骤操作，保留旧模块回退。
+
 ## 本地源码验证
 
 先用 `git status --short` 检查并保存本地修改，再执行：

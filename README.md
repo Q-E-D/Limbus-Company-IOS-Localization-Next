@@ -6,6 +6,18 @@
 
 构建工具版本：`v0.2.0-alpha.2`（实验版源码标签，补齐参考数据署名与许可）。该标签不提供新的 Shadowrocket 资源附件，手机安装地址仍为下面的 `reviewed-20261008`。源码升级、资源升级与回退步骤见 [升级验证说明](docs/UPGRADE.md)。
 
+### LLC 原文实验包
+
+独立资源预发布版本：`llc-experimental-20261015`，使用固定的 LLC `2026100901` 快照与官方日文资源构建，保留原文、不应用字形替换。不是最新译文或已完成 iPhone 验证的稳定包。参考字符集合未覆盖 1,447 种输出字符，可能有缺字/方框；未合并部分保留日文。
+
+在 Shadowrocket 模块页关闭旧汉化模块，再添加并启用此地址：
+
+```text
+https://github.com/Q-E-D/Limbus-Company-IOS-Localization-Next/releases/download/llc-experimental-20261015/LimbusReviewed.module
+```
+
+重新连接 Shadowrocket 并重启游戏，语言选日语；确认新版本清单和 ZIP 成功下载后，再检查主界面、技能与剧情字形。完整步骤与缓存回退限制见 [升级验证说明](docs/UPGRADE.md)。[实验包发布说明](https://github.com/Q-E-D/Limbus-Company-IOS-Localization-Next/releases/tag/llc-experimental-20261015)。
+
 ## Shadowrocket 安装
 
 前提：已在 Shadowrocket 生成、安装并信任自己的 CA，已开启 HTTPS 解密。

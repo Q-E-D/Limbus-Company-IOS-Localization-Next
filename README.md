@@ -1,8 +1,10 @@
 # Limbus-Company-IOS-Localization-Next
 
-面向 Shadowrocket / iOS MitM 汉化的离线资源审核与打包原型。首个发行版使用已核查的 ghcruise `v1.116.2-alpha` 资源（2026-10-08），提供固定版本的安装模块。
+面向 Shadowrocket / iOS MitM 汉化的离线资源审核与打包工具。首个发行版使用已核查的 ghcruise `v1.116.2-alpha` 资源（2026-10-08），提供固定版本的安装模块。
 
-此工具支持两种操作：验证并原样暂存已审查的 ZIP/清单，或用已经适配移动端字库的 JSON 覆盖现有日文槽位、重新生成 ZIP 与清单。仅用 Python 3 标准库；不联网、不安装证书、不运行游戏、不发布 GitHub Release。
+此工具支持验证已审查资源、将 LocalizeLimbusCompany (LLC) 中文 JSON 按稳定 ID 合并进日文资源槽位，并重新生成 ZIP 与清单。它只改文本资源，不修改或嵌入游戏字体；字库文件目前以从已观察移动端资源推导的覆盖下界作为参考。仅用 Python 3 标准库；不联网、不安装证书、不运行游戏、不发布 GitHub Release。
+
+构建工具版本：`v0.2.0-alpha.1`（实验版源码标签）。该标签不提供新的 Shadowrocket 资源附件，手机安装地址仍为下面的 `reviewed-20261008`。源码升级、资源升级与回退步骤见 [升级验证说明](docs/UPGRADE.md)。
 
 ## Shadowrocket 安装
 
@@ -44,15 +46,41 @@ python3 prepare_release.py \
 
 输出 `localize_jp.zip`、`manifest.json`、`LimbusReviewed.module`、`validation.json`。输出目录必须不存在，防止覆盖之前的结果。上传附件时仍须保留原项目许可、来源、作者署名及修改说明；生成的模块需在相同标签的附件实际发布后才可使用。
 
-需要替换 JSON 时追加 `--overlay-jp /path/to/adapted-jp`。该目录使用 ZIP 中 `LocalizeTemp_jp/` 之后的相对路径，例如 `JP_AbDlg_DonQuixote.json` 或 `StoryData/JP_….json`。只能覆盖已有槽位；新游戏版本应重新获取配套底包和清单。译文目录的每个文件都必须是 JSON，不能直接传入 LLC 的未适配目录。
+### 从 LLC 构建
+
+准备与目标游戏版本匹配的官方日文 ZIP、manifest、LLC 简体中文 ZIP，并为每个输入记录 SHA-256。构建必须使用固定输入；不要在构建时下载未经审查的 `latest`。示例：
+
+```sh
+python3 prepare_release.py \
+  --zip /path/to/localize_jp.zip \
+  --manifest /path/to/manifest.json \
+  --zip-sha256 <official-jp-zip-sha256> \
+  --manifest-sha256 <manifest-sha256> \
+  --refresh-jp-hashes \
+  --llc-zip /path/to/llc-zh-CN.zip \
+  --llc-zip-sha256 <llc-zip-sha256> \
+  --font-charset data/mobile-font-charset.txt \
+  --allow-missing-glyphs \
+  --repo YOUR_OWNER/YOUR_REPO \
+  --tag llc-reviewed-YYYYMMDD \
+  --out ./staged-llc-build
+```
+
+`--refresh-jp-hashes` 只在 ZIP/manifest 路径、文件集合和原始大小都匹配时重算 JP Hash。默认 `--glyph-mode preserve` 原样保留 LLC 字符，不会把繁體自動轉成簡體；若覆盖参考中有缺字，构建默认失败。`--allow-missing-glyphs` 只用于本地实验包，不代表这些字在 iPhone 上可显示。
+
+如有人工审核的单字替换表，可用 `--glyph-mode compatible --glyph-map /path/to/map.json` 显式替换参考字库不含的字符。该替换可能改变词义、专名或语气，输出不会是严格的简体原文，必须逐项审校。仓库没有内置通用替换表，因为无法从字形相似可靠推出语义等价。
+
+之前构建的样例位于忽略目录 `work/llc-20261009-preserve-experimental`：输入 LLC ZIP SHA-256 为 `534ac2a4f020d7bde05a2d088b917fa24871d68b122927fc5b282a915a19d5ee`。它来自固定的 2026-10-09 资源快照，不代表 LLC 当前上游版本。样例匹配 2,330 个 JP 槽位、101,596 条记录；参考字符集有 4,620 字，仍发现 1,447 个未覆盖字符（按字符与文本字段组合计数，共命中 682,233 次；同一字在同一字段重复出现只计一次）。所以它是结构验证通过的实验构建，不可当作可发布或实机字库验证通过的版本。
+
+需要手工覆盖 JSON 时仍可追加 `--overlay-jp /path/to/adapted-jp`。目录使用 ZIP 中 `LocalizeTemp_jp/` 之后的相对路径，例如 `JP_AbDlg_DonQuixote.json` 或 `StoryData/JP_….json`，只能覆盖已有槽位。
 
 ## 范围与限制
 
 验证包括输入 SHA-256、重复 JSON 键、文件路径、非普通 ZIP 项、解压大小上限、JSON 语法、JP 文件集合、文件大小及换行规范化 MD5。通过这些检查只说明结构与记录一致，不证明译文语义安全或内容可信。摘要也不代替人工审查。
 
-此原型没有实现完整的“官方日文资源 + LLC 中文译文 → 字形转换 → 剧情字段补全”流水线，也未在 iPhone 上验证。重打包后仍可能因字体覆盖、文本格式、游戏版本或缓存问题出现显示/下载异常。固定标签减少自动追随上游的变化，但 GitHub Release 附件本身仍可能被有权限的人替换；模块不执行 SHA-256 校验。
+LLC 到 JP 槽位的合并、剧情说话人字段补全和资源重打包已实现；但实际字体文件提取/注入、完整简繁转换和 iPhone 字形验证没有实现。`data/mobile-font-charset.txt` 只是从观察到的资源推导出的覆盖下界，不是 iOS 字体本身。即使报告无缺字，也需用目标 iOS 版本、游戏版本和具体设备验证字形、下载及缓存行为。固定标签减少自动追随上游的变化，但 GitHub Release 附件仍可被有权限的人替换；模块不执行 SHA-256 校验。
 
-测试：`python3 -m unittest -v test_prepare_release.py`。
+测试：`python3 -m unittest -v test_prepare_release.py test_llc_build.py`。
 
 ## 参考与许可
 

@@ -76,6 +76,49 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
                 p.read_asset(path, "0" * 64)
 
+    def test_refresh_jp_hashes_requires_same_paths_and_sizes(self):
+        zip_data, manifest_data = self.fixture()
+        manifest = json.loads(manifest_data)
+        next(iter(manifest["Files"].values()))["Hash"] = "0" * 32
+        refreshed, changed = p.refresh_jp_hashes(
+            zip_data, json.dumps(manifest).encode())
+        self.assertEqual(changed, ["Assets/Resources_moved/Localize/jp/JP_Test.json"])
+        self.assertEqual(p.validate(zip_data, refreshed)["zip_json_count"], 1)
+        manifest = json.loads(refreshed)
+        next(iter(manifest["Files"].values()))["Size"] += 1
+        with self.assertRaisesRegex(ValueError, "size mismatch"):
+            p.refresh_jp_hashes(zip_data, json.dumps(manifest).encode())
+
+    def test_llc_overlay_replaces_text_by_id_and_maps_values_only(self):
+        jp_data = io.BytesIO()
+        with zipfile.ZipFile(jp_data, "w") as archive:
+            archive.writestr("LocalizeTemp_jp/JP_Test.json", json.dumps({
+                "dataList": [{"id": 1, "name": "old", "imgStr": "old.png"},
+                             {"id": 2, "name": "untouched"}]
+            }).encode())
+        llc_data = io.BytesIO()
+        with zipfile.ZipFile(llc_data, "w") as archive:
+            archive.writestr("Test.json", json.dumps({
+                "dataList": [{"id": 1, "name": "你", "imgStr": "new.png"}]
+            }).encode())
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            charset = root / "charset.txt"
+            charset.write_text("好\n", encoding="utf-8")
+            glyph_map = root / "glyph-map.json"
+            glyph_map.write_text('{"你":"好"}', encoding="utf-8")
+            output = root / "overlay"
+            report = p.build_overlay_from_llc(
+                jp_data.getvalue(), llc_data.getvalue(), output, charset, glyph_map,
+                glyph_mode="compatible")
+            result = json.loads((output / "JP_Test.json").read_text())
+        self.assertEqual(result["dataList"][0], {
+            "id": 1, "name": "好", "imgStr": "old.png"})
+        self.assertEqual(result["dataList"][1]["name"], "untouched")
+        self.assertEqual(report["mapped_chars"], {"你->好": 1})
+        self.assertEqual(report["missing_chars"], {})
+        self.assertEqual(report["matched_rows"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

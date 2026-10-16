@@ -1,5 +1,15 @@
 # 升级与验证
 
+## llc-ios-20261016-r5-audited：r5 资源审计与实机验证包
+
+本标签沿用 r5 的 ZIP、清单和文本适配，新增最终整包文本审计、字体目录解析工具及 Stream 实机抓包调查记录。它没有新增游戏字体；发布的目的为让真机验证当前文本包和缓存行为。
+
+```text
+https://github.com/Q-E-D/Limbus-Company-IOS-Localization-Next/releases/download/llc-ios-20261016-r5-audited/LimbusReviewed.module
+```
+
+安装前完全退出游戏，关闭旧 Limbus 模块，只启用本版本并重连 Shadowrocket。语言保持日语；确认请求命中新标签后，再检查之前出现方框和英文的位置。不要清数据或卸载。若仍有方框，请记录完整句子和界面，便于与字体覆盖问题分离。
+
 ## llc-ios-20261016-r5-compat：配套清单与新增截图修正
 
 r4 日志显示多轮启动请求 EN、KR、JP 语言 ZIP，且清单与 JP 重写确实命中 r4。三张新截图也显示 r4 译文已加载，部分中文仍因缺字显示方框。日志没有 HTTP 状态或传输量，不能证明每次下载成功，也不能仅凭静态修复宣布重复下载已解决。

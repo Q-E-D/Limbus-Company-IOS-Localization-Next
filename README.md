@@ -6,12 +6,14 @@
 
 构建工具版本：`v0.2.0-alpha.2`（实验版源码标签，补齐参考数据署名与许可）。该标签不提供新的 Shadowrocket 资源附件，手机安装地址仍为下面的 `reviewed-20261008`。源码升级、资源升级与回退步骤见 [升级验证说明](docs/UPGRADE.md)。
 
+**2026-10-16 实机反馈：r5 仍有方框和英文，尚未根治。** 已解析配套 iOS catalog：实际字体 Bundle 位于客户端本地 RuntimePath，现有两条语言 JSON 重写不能增加字形。部分英文来自之前的主动避字替换。本轮新增最终整包文本审计和字体目录解析工具，没有发布新兼容包；后续字体替换所需资产、已核实的参考项目实现和验证条件见 [根因调查](docs/FONT-INVESTIGATION.md)。
+
 ### LLC 原文实验包
 
-当前候选版为 `llc-ios-20261016-r5-compat`：基于重新下载的配套官方资源，修正英文、韩文清单与实际 ZIP 的 Hash/Size 不一致，并补充 r4 截图中的两句剧情、月狂石说明及 Gregor 姓名适配。35 项测试及最终资源静态核验通过；重复启动和实际字体渲染仍待手机验证。关闭旧 Limbus 模块，只启用新版：
+当前候选版为 `llc-ios-20261016-r5-audited`：沿用 r5 的配套官方资源和文本适配，增加最终整包审计、字体目录解析及实机抓包调查记录。43 项测试及最终资源静态核验通过；字体注入仍未实现，重复启动和实际字体渲染待手机验证。关闭旧 Limbus 模块，只启用新版：
 
 ```text
-https://github.com/Q-E-D/Limbus-Company-IOS-Localization-Next/releases/download/llc-ios-20261016-r5-compat/LimbusReviewed.module
+https://github.com/Q-E-D/Limbus-Company-IOS-Localization-Next/releases/download/llc-ios-20261016-r5-audited/LimbusReviewed.module
 ```
 
 四张截图已定位到 `复、吗、卡、你、胜、嗯、哐、哧` 缺字。新增 `llc-ios-20261015-r4-compat` 候选版：补上独立日文变体映射，并用 6 条整字段适配处理截图中的复制按钮、名片句型、卡戎姓名及三条开场台词。**它含少量措辞改写及官方英文名 `Charon`，不再只是单字简繁转换。** 目标文本静态检查通过，其他场景仍可能有方框，未做新包的手机渲染验证。关闭其他 Limbus 模块后安装：
@@ -109,6 +111,8 @@ python3 prepare_release.py \
 ```
 
 `--refresh-jp-hashes` 只在 ZIP/manifest 路径、文件集合和原始大小都匹配时重算 JP Hash。默认 `--glyph-mode preserve` 原样保留 LLC 字符，不会把繁體自動轉成簡體；若覆盖参考中有缺字，构建默认失败。`--allow-missing-glyphs` 只用于本地实验包，不代表这些字在 iPhone 上可显示。
+
+LLC 构建报告新增 `text_audit`：检查最终 ZIP 中全部已知可见文本字段，包括没有 LLC 匹配的 JP 文件，输出参考集外字符及拉丁字母/假名候选的位置。缺字门禁以最终包为准。拉丁字母/假名候选需要审校，不能直接视为漏翻；字符参考也不能证明实际字体覆盖。
 
 发布固定清单时，应追加 `--official-localize-root https://downloadcommon.limbuscompanycdn.org/lYYYYMMDD_VERSION/Assets`，使用日志中确认的实际版本 URL。这样两条重写仅匹配配套资源目录；游戏改用新目录后将使用官方资源，需重新审查和构建相应汉化包。输入 SHA-256 验证不证明 URL 与输入配套，发布前还须核对来源和报告。省略此选项保留旧版通配匹配行为，不适合跨游戏版本长期启用固定清单。
 

@@ -133,6 +133,57 @@ def _is_cjk(char):
             or 0xF900 <= code <= 0xFAFF or 0x20000 <= code <= 0x323AF)
 
 
+def audit_output_text(zip_data, charset, include_candidates=False):
+    """Inspect the final archive, including files and fields that did not merge."""
+    missing, latin, kana = Counter(), Counter(), Counter()
+    examples = {"missing_chars": {}, "latin_candidates": [], "kana_candidates": []}
+    seen_examples = {"latin_candidates": set(), "kana_candidates": set()}
+    candidates = {"latin_candidates": [], "kana_candidates": []}
+    fields = 0
+
+    def walk(value, key, path, filename):
+        nonlocal fields
+        if isinstance(value, dict):
+            for name, child in value.items():
+                walk(child, name, path + "/" + name.replace("~", "~0").replace("/", "~1"), filename)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                walk(child, key, path + "/" + str(index), filename)
+        elif isinstance(value, str) and _text_key(key):
+            fields += 1
+            sample = {"file": filename, "pointer": path, "text": value[:240]}
+            for char in sorted(set(value)):
+                if _is_cjk(char) and char not in charset:
+                    missing[char] += 1
+                    examples["missing_chars"].setdefault(char, sample)
+            # Candidates need review: Latin words can be deliberate terms or
+            # lyrics. Do not count tag attributes or format placeholders.
+            visible = re.sub(r"</?[A-Za-z][^>]*>|\{[^{}]*\}", "", value)
+            for kind, pattern, counter in (
+                    ("latin_candidates", r"[A-Za-z]{3,}", latin),
+                    ("kana_candidates", r"[\u3041-\u3096\u30a1-\u30fa]", kana)):
+                if re.search(pattern, visible):
+                    counter[filename] += 1
+                    if include_candidates:
+                        candidates[kind].append(sample)
+                    if len(examples[kind]) < 20 and visible not in seen_examples[kind]:
+                        examples[kind].append(sample)
+                        seen_examples[kind].add(visible)
+
+    with zipfile.ZipFile(io.BytesIO(zip_data)) as archive:
+        for _, filename in sorted(_slot_files(archive, jp=True).items()):
+            walk(parse_json(archive.read(filename)), "", "", filename)
+    result = {"visible_fields": fields, "missing_chars": dict(missing),
+            "latin_candidate_fields": sum(latin.values()), "latin_candidate_files": dict(latin),
+            "kana_candidate_fields": sum(kana.values()), "kana_candidate_files": dict(kana),
+            "examples": examples,
+            "limits": "Known visible keys only; charset is an observed reference, not actual font coverage; "
+                      "Latin/kana candidates are not proof of missing translation"}
+    if include_candidates:
+        result["candidate_locations"] = candidates
+    return result
+
+
 def _identity(row):
     if isinstance(row, dict):
         for key in IDENTITY_KEYS:
@@ -622,16 +673,22 @@ def main():
                 overlay_report = build_overlay_from_llc(
                     zip_data, llc_data, overlay_dir, args.font_charset, args.glyph_map,
                     args.glyph_mode, args.text_fallbacks)
-                if overlay_report["missing_chars"] and not args.allow_missing_glyphs:
-                    raise ValueError("Uncovered output glyphs: "
-                                     + "".join(sorted(overlay_report["missing_chars"]))
-                                     + "; use --allow-missing-glyphs only for local testing")
             else:
                 overlay_dir = args.overlay_jp
             zip_data, manifest_data, changed = repack(zip_data, manifest_data, overlay_dir)
         report = validate(zip_data, manifest_data)
         report["overlaid_json_count"] = changed
         if overlay_report is not None:
+            report["text_audit"] = audit_output_text(zip_data, load_charset(args.font_charset))
+            if report["text_audit"]["missing_chars"] and not args.allow_missing_glyphs:
+                examples = report["text_audit"]["examples"]["missing_chars"]
+                locations = [f"{char}: {sample['file']}#{sample['pointer']}"
+                             for char, sample in sorted(examples.items())[:10]]
+                raise ValueError("Uncovered final archive glyphs: "
+                                 + "".join(sorted(report["text_audit"]["missing_chars"]))
+                                 + "\n" + "\n".join(locations)
+                                 + "\nUse inspect_release_text.py for a read-only full audit; "
+                                   "--allow-missing-glyphs is only for local testing")
             report["llc_build"] = overlay_report
             report["experimental"] = True
             report["font_coverage"] = "reference-only; device not verified"
